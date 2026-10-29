@@ -1,0 +1,1 @@
+{ "name": "lma-tools", "private": true, "version": "1.0.0", "dependencies": { "@babel/parser": "^7.24.0" } }
