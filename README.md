@@ -3,14 +3,15 @@
 A local web application for reviewing deterministic, syntax-aware migrations of legacy code. It proposes changes, displays a side-by-side diff, validates syntax, records migration history, and lets a developer accept or reject each result before export. Original source is preserved with SHA-256 hashes, findings, validation results, and a Markdown report.
 
 ![Dashboard](docs/screenshots/01-dashboard.png)
-
+![Dashboard](docs/screenshots/02-python-migration-review.png)
+![Dashboard](docs/screenshots/03-react-migration-review.png)
+![Dashboard](docs/screenshots/04-accepted-and-report.png)
+![Dashboard](docs/screenshots/05-manual-review-required.png)
 
 ## Supported migrations
 
 - **Python 2 to Python 3** (`.py`): automatically applies a bounded set of syntax-aware rewrites, such as `print` statements to `print()`, `raw_input` to `input`, and `xrange` to `range`. Ambiguous or unsupported constructs are flagged for manual review.
 - **React class components to function components with Hooks** (`.js`, `.jsx`, `.tsx`): converts a limited subset of class components. Lifecycle methods, complex constructors, and other unsupported patterns require manual review.
-
-See [supported migrations](docs/supported-migrations.md) for the detailed rules and limitations.
 
 ## Features
 
