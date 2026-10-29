@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Legacy Codebase Migration Assistant</title>
+<style>
+:root{--bg:#f5f6f8;--panel:#fff;--ink:#1c2230;--mute:#667085;--line:#e3e6ec;--brand:#3b5bdb;--add:#e6f6ec;--del:#fdeaea;--chg:#fff6dd;--ok:#16794c;--warn:#b25e09;--bad:#b42318}
+@media (prefers-color-scheme:dark){:root{--bg:#12151c;--panel:#1b2030;--ink:#e8ebf2;--mute:#9aa3b5;--line:#2c3348;--brand:#7c93ff;--add:#173b2a;--del:#4a2020;--chg:#4a3d17;--ok:#5fd39b;--warn:#f0b35a;--bad:#ff8a80}}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--ink)}
+header{display:flex;align-items:center;gap:12px;padding:12px 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+header h1{font-size:17px;margin:0}header small{color:var(--mute)}
+main{display:grid;grid-template-columns:300px minmax(0,1fr) 340px;gap:12px;padding:12px;height:calc(100vh - 54px)}
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;overflow:auto}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);margin:16px 0 8px}h2:first-child{margin-top:0}
+label{display:block;font-size:12px;color:var(--mute);margin:8px 0 3px}
+select,input,textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink);font:inherit}
+textarea{font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;height:190px;resize:vertical}
+button{padding:8px 12px;border-radius:7px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;cursor:pointer}
+button.primary{background:var(--brand);border-color:var(--brand);color:#fff;width:100%;margin-top:10px}
+button.ok{background:var(--ok);border-color:var(--ok);color:#fff}button.bad{color:var(--bad);border-color:var(--bad)}button:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.row button{flex:1}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600;border:1px solid currentColor}
+.safe,.passed,.accepted{color:var(--ok)}.needs_review,.pending,.could_not_run,.medium,.no_changes{color:var(--warn)}.failed,.manual_review_required,.rejected,.high{color:var(--bad)}.low,.info{color:var(--mute)}
+#hist div{padding:6px 8px;border:1px solid var(--line);border-radius:7px;margin-bottom:6px;cursor:pointer;font-size:12px}#hist div:hover{border-color:var(--brand)}
+.dh{display:grid;grid-template-columns:1fr 1fr;font-weight:600;border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:4px}
+table{width:100%;border-collapse:collapse;table-layout:fixed;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace}
+td{padding:0 6px;vertical-align:top;white-space:pre-wrap;word-break:break-word;border-bottom:1px solid transparent}td.n{width:34px;color:var(--mute);text-align:right;user-select:none}
+tr.change td.l,tr.delete td.l{background:var(--del)}tr.change td.r,tr.insert td.r{background:var(--add)}tr.change td.l{background:var(--chg)}
+.empty{color:var(--mute);padding:40px 10px;text-align:center}
+.f{border:1px solid var(--line);border-left-width:4px;border-radius:7px;padding:7px 9px;margin-bottom:7px;font-size:12px}.f b{font-size:11px}
+.f.high{border-left-color:var(--bad)}.f.medium{border-left-color:var(--warn)}.f.low,.f.info{border-left-color:var(--mute)}
+pre{white-space:pre-wrap;font-size:12px;background:var(--bg);padding:10px;border-radius:7px;border:1px solid var(--line);max-height:300px;overflow:auto}
+.v{display:flex;justify-content:space-between;gap:8px;font-size:12px;margin-bottom:5px}
+.note{color:var(--mute);font-size:12px;margin-top:8px}
+@media (max-width:1000px){main{grid-template-columns:1fr;height:auto}}
+</style>
+</head>
+<body>
+<header><h1>Legacy Codebase Migration Assistant</h1><small>parse → analyze → plan → transform → review → validate</small></header>
+<main>
+  <section id="left">
+    <h2>1 · Source</h2>
+    <label for="sample">Load a sample</label><select id="sample"><option value="">— choose —</option></select>
+    <label for="file">…or upload a file</label><input type="file" id="file" accept=".py,.js,.jsx,.tsx">
+    <label for="mtype">Migration</label><select id="mtype"></select>
+    <label for="fname">Filename</label><input id="fname" placeholder="example.py">
+    <label for="src">Code</label><textarea id="src" spellcheck="false" placeholder="Paste legacy code here"></textarea>
+    <button class="primary" id="analyze">Analyze &amp; migrate</button>
+    <p class="note">Code is processed locally on this server. It is parsed, never executed, and never sent to external AI services.</p>
+    <h2>History</h2><div id="hist"></div>
+  </section>
+  <section id="center">
+    <div class="dh"><div id="lt">Original</div><div id="rt">Proposed</div></div>
+    <div id="diff"><div class="empty">Choose a sample or paste code, then press “Analyze &amp; migrate”.</div></div>
+  </section>
+  <section id="right">
+    <h2>2 · Result</h2><div id="status" class="note">No migration yet.</div>
+    <h2>Findings</h2><div id="findings"></div>
+    <h2>Validation</h2><div id="validation"></div>
+    <h2>3 · Review</h2>
+    <div class="row"><button class="ok" id="accept" disabled>Accept</button><button class="bad" id="reject" disabled>Reject</button></div>
+    <div class="row"><button id="export" disabled>Export file</button><button id="report" disabled>Report</button></div>
+    <pre id="reportbox" hidden></pre>
+    <p class="note">Passing syntax checks does not prove identical behaviour. Run your own tests before merging.</p>
+  </section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+let job = null, samples = [];
+const api = async (path, opts) => {
+  const r = await fetch("/api" + path, opts);
+  if (!r.ok) { let m = r.statusText; try { m = (await r.json()).detail || m; } catch (e) {} throw new Error(typeof m === "string" ? m : JSON.stringify(m)); }
+  return r;
+};
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+const pill = (v) => el("span", "pill " + v, v.replace(/_/g, " "));
+
+async function init() {
+  (await (await api("/migration-types")).json()).forEach((t) => { const o = el("option", "", t.label); o.value = t.id; $("mtype").append(o); });
+  samples = await (await api("/samples")).json();
+  samples.forEach((s, i) => { const o = el("option", "", s.name); o.value = i; $("sample").append(o); });
+  refreshHistory();
+}
+$("sample").onchange = () => {
+  const s = samples[$("sample").value]; if (!s) return;
+  $("src").value = s.content; $("fname").value = s.name; $("mtype").value = s.migration_type;
+};
+$("file").onchange = async () => {
+  const f = $("file").files[0]; if (!f) return;
+  $("src").value = await f.text(); $("fname").value = f.name;
+  $("mtype").value = /\.py$/i.test(f.name) ? "python2-to-python3" : "react-class-to-function";
+};
+$("analyze").onclick = async () => {
+  try {
+    const r = await api("/migrations", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename: $("fname").value, content: $("src").value, migration_type: $("mtype").value }) });
+    job = await r.json(); await render(); refreshHistory();
+  } catch (e) { $("status").replaceChildren(el("span", "failed", "Error: " + e.message)); }
+};
+async function render() {
+  $("reportbox").hidden = true;
+  const st = $("status"); st.replaceChildren(pill(job.migration_status), document.createTextNode(" review: "), pill(job.review));
+  $("lt").textContent = "Original · " + job.filename; $("rt").textContent = job.migrated === null ? "Proposed · (none)" : "Proposed";
+  const d = await (await api(`/migrations/${job.id}/diff`)).json(), box = $("diff");
+  if (!d.available) { box.replaceChildren(el("div", "empty", "No automatic migration was produced. This file needs manual conversion — see the findings on the right.")); }
+  else {
+    const t = el("table"), b = el("tbody");
+    d.rows.forEach((r) => { const tr = el("tr", r.tag);
+      [[r.ln, "n"], [r.left, "l"], [r.rn, "n"], [r.right, "r"]].forEach(([v, c]) => tr.append(el("td", c, v === null ? "" : String(v))));
+      b.append(tr); });
+    t.append(b); box.replaceChildren(t);
+  }
+  $("findings").replaceChildren(...(job.findings.length ? job.findings.map((f) => { const c = el("div", "f " + f.severity);
+    const h = el("b", "", `${f.rule_id} · line ${f.line} · ${f.severity}` + (f.auto_fixed ? " · auto-fixed" : "") + (f.review_required ? " · REVIEW" : ""));
+    c.append(h, el("div", "", f.message)); return c; }) : [el("div", "note", "No findings.")]));
+  $("validation").replaceChildren(...(job.validation.length ? job.validation.map((v) => { const r = el("div", "v"); r.append(el("span", "", v.check), pill(v.status)); r.title = v.detail; return r; }) : [el("div", "note", "No validation ran (no migrated output).")]));
+  const done = job.review !== "pending";
+  $("accept").disabled = done || job.migrated === null || job.migration_status === "failed";
+  $("reject").disabled = done; $("export").disabled = job.review !== "accepted"; $("report").disabled = false;
+}
+async function review(decision) {
+  try { await api(`/migrations/${job.id}/review`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ decision }) });
+    job = await (await api(`/migrations/${job.id}`)).json(); await render(); refreshHistory(); } catch (e) { alert(e.message); }
+}
+$("accept").onclick = () => review("accept"); $("reject").onclick = () => review("reject");
+$("export").onclick = async () => {
+  const blob = await (await api(`/migrations/${job.id}/export`)).blob();
+  const a = el("a"); a.href = URL.createObjectURL(blob); a.download = job.filename; a.click(); URL.revokeObjectURL(a.href);
+};
+$("report").onclick = async () => { const b = $("reportbox"); b.textContent = await (await api(`/migrations/${job.id}/report`)).text(); b.hidden = false; };
+async function refreshHistory() {
+  const list = await (await api("/migrations")).json(), h = $("hist");
+  h.replaceChildren(...list.slice(0, 8).map((j) => { const d = el("div"); d.append(el("b", "", j.filename + " "), pill(j.review));
+    d.onclick = async () => { job = await (await api(`/migrations/${j.id}`)).json(); render(); }; return d; }));
+}
+init();
+</script>
+</body>
+</html>
