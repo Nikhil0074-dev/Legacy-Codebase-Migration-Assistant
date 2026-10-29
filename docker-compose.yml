@@ -1,0 +1,10 @@
+services:
+  app:
+    build: .
+    ports: ["8000:8000"]
+    volumes: ["lma-data:/data"]
+    read_only: true
+    tmpfs: ["/tmp"]
+    cap_drop: [ALL]
+volumes:
+  lma-data:
